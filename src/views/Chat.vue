@@ -78,6 +78,22 @@ onMounted(async () => {
       }
     });
 
+    socket.on("closedTicket", async (message) => {
+      console.log('socket close', message);
+      if(message.ticket_id == selectedTicket.value){
+        tickets.value = null
+        chatMessages.value = []
+        selectedTicket.value = 0
+      }
+
+      if (role.value == 2) {
+        const ticketListResponse = await axios.get(
+          Globals.SERVER_URL + `/tickets/open`
+        );
+        ticketList.value = ticketListResponse.data;
+      }
+    })
+
     // Assuming you have a similar endpoint for chat messages
     // const chatResponse = await axios.get(Globals.SERVER_URL + `/chat/${user_id}`);
     // chatMessages.value = chatResponse.data;
@@ -201,6 +217,29 @@ async function sendMessage() {
   }
 }
 
+async function closeTicket(){
+  await axios.patch(Globals.SERVER_URL + `/tickets/update-status`, {
+    id: selectedTicket.value,
+    status: "closed"
+  });
+
+  socket.emit("closedTicket", {
+    ticket_id: selectedTicket.value,
+    message: 'Ticket Closed',
+  });
+
+  tickets.value = null
+  chatMessages.value = []
+  selectedTicket.value = 0
+
+  if (role.value == 2) {
+    const ticketListResponse = await axios.get(
+      Globals.SERVER_URL + `/tickets/open`
+    );
+    ticketList.value = ticketListResponse.data;
+  }
+}
+
 async function handleFileUpload(event) {
   // Get the uploaded file
   file.value = event.target.files[0];
@@ -276,6 +315,7 @@ function uploadAttactment(){
       />
       <button @click="sendMessage" style="width: 10%">Send</button>
       <button @click="uploadAttactment" style="width: 10%">Send Attachment</button>
+      <button @click="closeTicket" style="width: 15%;float: right;margin-top: 20px;">Close Ticket</button>
     </div>
     <div v-else>
       <div class="login">
@@ -310,6 +350,7 @@ function uploadAttactment(){
         />
         <button @click="sendMessage" style="width: 12.5%">Send</button>
         <button @click="uploadAttactment" style="width: 12.5%">Send Attachment</button>
+        <button v-if="selectedTicket" @click="closeTicket" style="width: 15%;float: right;margin-top: 20px;">Close Ticket</button>
       </div>
     </span>
   </span>
